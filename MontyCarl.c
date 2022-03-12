@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <time.h>
 #include "OceanCell.h"
-
 
 // Helper function:
 // Returns a random number between 0 and a param limit, inclusive.
@@ -14,6 +14,10 @@ int getRand(int limit) {
     return (rand() % (limit + 1));
 }
 
+
+// Create a function to return a Uniform[0,1] random variable
+double get_random() { return ((double)rand() / (double)RAND_MAX); }
+
 // Helper function: 
 // Returns a random number from 0-399 according to the 
 // appropriate statstical distribution.
@@ -22,28 +26,35 @@ int setRandomLocation() {
     // For now, we will simply put the sub
     // in a random location, quasi-uniformly
     // distributed between cell 0 and 399.
-    return getRand(399);
+    // return getRand(399);
+  // Uniform[0,1] draw
+  double udraw ;
+  // Random location
+  double location ; 
+  udraw = get_random() ;
+  // Apply the inverse function and scale to 400.
+  if (udraw <= 0.5 ) 
+    location = (400.0*sqrt(udraw/2.0)) ;
+  else
+    location = (400.0*(1.0 - sqrt( (1.0-udraw)/2.0 ))) ;
+  // Return the integer location (0 to 399)
+  return (int)location ;
 }
 
 // Helper function:
 // Searches an input OceanCell to determine if the sub is there. 
 // If the sub is not there, return zero. If the sub is there,
-// randomly determine if the sub is found there with a 46% 
+// randomly determine if the sub is found there with a success_prob (try 46%)
 // chance of success.
-int searchCell(struct OceanCell input) {           
-    if (input.subHere == 1) {  
-        // TEST: always finds sub if there
-        // return 1;
-
-
-        int found = getRand(99);
-        // Must offset the value of found since getRand returns 0-99 in this case.
-        found++;
-        if (found <= 46) {
-            return 1;
-        }
-    } 
-    return 0;
+int searchCell(struct OceanCell input) {
+  int found = 0 ;
+  if (input.subHere == 1) {  
+    // TEST: always finds sub if there
+    // return 1;
+    float success_prob = 0.46 ;
+    found = get_random() < success_prob ;
+  }
+  return found ;
 }
 
 // Searches the array for the location of the sub. 
@@ -60,12 +71,16 @@ void searchArray(struct OceanCell searchArea[], int  returnArr[]) {
     int numSearches = 0;
     int searchLeft;
     int searchRight;
-    
+
+
+    // Should be able to avoid the rightside/leftside stuff with
+    int curCell = 200 ; // initialize before loop
     for (int i = 0; i <= 200; i++) {
-        // Set the cells to be searched according to i, the search offset.
-        searchLeft = 200 - i;
-        searchRight = 200 + i;
-        int found = 0;
+      curCell = curCell + pow(-1,i)*(i+1) ; // make this the last line in the loop 200+1-2+3-4+5-6,... etc. 
+      // Set the cells to be searched according to i, the search offset.
+      searchLeft = 200 - i;
+      searchRight = 200 + i;
+      int found = 0;
         
         // Edge case for searching the last cell.
         // If the search offset, i, ==200,
@@ -157,14 +172,11 @@ void main() {
     } while(searchReturn[0] == -1);
 
     // TESTING: 
-    printf("You searched a cell %i times. \n", searchCounter);
+    printf("You conducted %i cell searches. \n", searchCounter);
     printf("You found the sub in cell %i, where we expected it in cell %i. \n", searchReturn[0], location);
 
     // TODO: Main should run the setup and search many thousands of times and write searchCounter
     // out to a text file suitable for import to R for statistical analysis.
     
 }
-
-
-
 
