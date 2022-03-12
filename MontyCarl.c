@@ -6,27 +6,14 @@
 #include <time.h>
 #include "OceanCell.h"
 
-// Helper function:
-// Returns a random number between 0 and a param limit, inclusive.
-// This is not the *most* statistically sound approach, but it works for now.
-// TODO: rewrite to ensure statistical soundness of the uniformity of this distribution.
-int getRand(int limit) {
-    return (rand() % (limit + 1));
+
+// Create a function to return a Uniform[0,1] random variable
+double get_random() { 
+    return ((double)rand() / (double)RAND_MAX); 
 }
 
 
-// Create a function to return a Uniform[0,1] random variable
-double get_random() { return ((double)rand() / (double)RAND_MAX); }
-
-// Helper function: 
-// Returns a random number from 0-399 according to the 
-// appropriate statstical distribution.
-// TODO: distribute locations in a non-uniform distribution.
 int setRandomLocation() {
-    // For now, we will simply put the sub
-    // in a random location, quasi-uniformly
-    // distributed between cell 0 and 399.
-    // return getRand(399);
   // Uniform[0,1] draw
   double udraw ;
   // Random location
