@@ -1,3 +1,5 @@
+// Performs a Monte Carlo simulation of submarine search with a naive algorithm.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
