@@ -42,7 +42,9 @@ int searchCell(struct OceanCell input) {
   float dieroll = get_random() ;
   if (input.subHere == 1) {
     printf("You're in the right place but don't know it yet.\nNeed below %4.3f, got %4.3f\n", success_prob, dieroll) ;
-    found = (dieroll < success_prob) ;
+    if (found = (dieroll < success_prob))
+      printf("Found it!\n");
+    else printf("Missed it!\n") ;
   }
   return found ;
 }
@@ -53,25 +55,25 @@ int searchCell(struct OceanCell input) {
 // returnArr[0] is the location of the sub or -1 if not found.
 // returnArr[1] is the total number of searches performed by the algorithm.
 // This function employs on the helper function searchCell(), which performs the
-// search and determines if the sub was found there according to the 46% probability of success.
+// search and determines if a present sub is found with 46% probability of success.
 
 void searchArray(struct OceanCell searchArea[], int returnArr[]) {
     int found = 0;
     int numSearches = 0;
 
     // Should be able to avoid the rightside/leftside stuff with
-    int curCell = 200 ; // initialize 
+    int curNaiveCell = 200 ; // initialize in the middle of the ocean
     for (int i = 0; i < 400; i++) {
       if (i<5 || i>395) {
-	printf("Iteration %i Searching cell %i\n", i, curCell) ;
+	printf("Iteration %i Searching cell %i\n", i, curNaiveCell) ;
       }
       // Seach current cell
-      searchArea[curCell].searched++ ;
-      found = searchCell(searchArea[curCell]);
-      numSearches++;
+      searchArea[curNaiveCell].naiveSearches++ ;
+      found = searchCell(searchArea[curNaiveCell]);
+      numSearches++ ;
       
       if (found == 1) {
-	returnArr[0] = curCell;
+	returnArr[0] = curNaiveCell;
 	returnArr[1] = numSearches;
 	break ;
       } else {
@@ -80,8 +82,21 @@ void searchArray(struct OceanCell searchArea[], int returnArr[]) {
 	returnArr[1] = numSearches;
       }
       // Update current cell
-      curCell = curCell + pow(-1,i)*(i+1) ; // make this the last line in the loop 200+1-2+3-4+5-6,... etc.
+      curNaiveCell = curNaiveCell + pow(-1,i)*(i+1) ; // make this the last line in the loop 200+1-2+3-4+5-6,... etc.
     }
+}
+
+
+int findBestLocation(struct OceanCell searchArea[]) {
+  int bestLocation = 0 ;
+  double curMax = searchArea[0].currentProbability ;
+  for (int i = 0; i < 400; i++) {
+    if (searchArea[i].currentProbability > curMax) {
+      bestLocation = i ;
+      curMax = searchArea[i].currentProbability  ;
+    }
+  }
+  return bestLocation ;
 }
 
 
@@ -90,19 +105,26 @@ void main() {
     // is run. 
     srand(time(0));
 
-    // Set up the array:
+    // Set up 
     int location = setRandomLocation();
     int searchCounter = 0;
     int searchReturn [2];
 
     struct OceanCell searchArea [400];
 
-    // Initialize all values to zero.
+    // Initialize the ocean and the priors
     for (int i = 0; i < 400; i++) {
         searchArea[i].subHere = 0;
-        searchArea[i].searched = 0;
+        searchArea[i].naiveSearches = 0;
+	searchArea[i].bayesSearches = 0;
+	if (i<200) 
+	  searchArea[i].currentProbability = (i+1)/40000.0 ;
+	else searchArea[i].currentProbability =  1/100.0 - (i)/40000.0 ;
+	printf("How likely  in cell %i? %10.8f\n", i, searchArea[i].currentProbability) ;
     }
 
+    printf("Best cell is %i\n\n", findBestLocation(searchArea) ) ;
+    
     // Set the location of the submarine.
     searchArea[location].subHere = 1;
 
@@ -110,18 +132,12 @@ void main() {
     do {
         searchArray(searchArea, searchReturn);
         searchCounter = searchCounter + searchReturn[1];
-
-        /* // Reset "searched" params in the array. */
-        /* for (int i = 0; i < 400; i++) { */
-        /*     searchArea[i].searched = 0; */
-        /* } */
     } while(searchReturn[0] == -1);
 
     // TESTING: 
-    printf("You conducted %i cell searches. \n", searchCounter);
-    // Next line is not working.
-    printf("You searched cell %i %i times. \n", searchReturn[0], searchArea[searchReturn[0]].searched );
-    printf("You found the sub in cell %i, where we expected it in cell %i. \n", searchReturn[0], location);
+    printf("Naive search conducted %i cell searches.\n", searchCounter);
+    printf("Naive search searched cell %i %i times.\n", searchReturn[0], searchArea[searchReturn[0]].naiveSearches );
+    printf("Naive search found the sub in cell %i, where we expected it in cell %i.\n\n", searchReturn[0], location);
 
     // TODO: Main should run the setup and search many thousands of times and write searchCounter
     // out to a text file suitable for import to R for statistical analysis.
