@@ -5,8 +5,10 @@
 #define OCEANCELL_H
 
 struct OceanCell {
-    int subHere;
-    int searched;
+  int subHere;
+  int naiveSearches;
+  int bayesSearches;
+  double currentProbability;
 };
 
 #endif
