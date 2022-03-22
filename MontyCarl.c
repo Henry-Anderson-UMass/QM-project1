@@ -7,11 +7,15 @@
 // Performs a Monte Carlo simulation of submarine search with a naive algorithm.
 
 
-// Set the probability of finding the submarine for searching the cell where it is.
-#define success_prob 0.46
+// Constants:
+// The probability that a search is successgful in finding the sub, and
+// the number of trials to be completed.
+#define SUCCESS_PROB 0.46
+#define NUM_TRIALS 1000
 
 
 // Helper function: return a random double uniformly distributed on [0,1]
+// TODO: this may not be statistically sound.
 double get_random() { 
   return ((double)rand() / (double)RAND_MAX); 
 }
@@ -19,34 +23,43 @@ double get_random() {
 // Set the location of the submarine according to the tent-shaped distribution shown in class.
 int set_random_location() {
   // Get a random draw on [0,1]
-  double udraw = get_random();
+  double draw = get_random();
   double location; 
   
   // Apply the inverse function and scale to 400.
-  if (udraw <= 0.5 ) {
-    location = (400.0*sqrt(udraw/2.0)) ;
+  if (draw <= 0.5 ) {
+    location = (400.0*sqrt(draw/2.0));
   } else {
-    location = (400.0*(1.0 - sqrt((1.0-udraw)/2.0 ))) ;
+    location = (400.0*(1.0 - sqrt((1.0-draw)/2.0 )));
   }
 
   // Return the integer location (0 to 399)
-  return (int)location ;
+  return (int)location;
 }
 
 // Helper function: Searches an input OceanCell to determine if the sub is there. 
 // If the sub is not there, return zero. If the sub is there,
-// randomly determine if the sub is found there with a success_prob (try 46%)
+// randomly determine if the sub is found there with a SUCCESS_PROB (try 46%)
 // chance of success.
 int search_cell(struct OceanCell input) {
-  int found = 0 ;
-  float dieroll = get_random() ;
+  float rand = get_random();
+  int found = 0;
+  
+
   if (input.subHere == 1) {
-    printf("You're in the right place but don't know it yet.\nNeed below %4.3f, got %4.3f\n", success_prob, dieroll) ;
-    if (found = (dieroll < success_prob))
-      printf("Found it!\n");
-    else printf("Missed it!\n") ;
+    found = (rand < SUCCESS_PROB);
+
+    //Reporting: print the results of each cell search.
+    /*
+    if (found == 0) {
+      printf("Missed the sub!\n");
+    } else {
+      printf("Found the sub!\n");
+    }
+    */
   }
-  return found ;
+  
+  return found;
 }
 
 // Searches the array for the location of the sub. 
@@ -66,9 +79,13 @@ void search_array(struct OceanCell searchArea[], int returnArr[]) {
   int curNaiveCell = 200; 
   
   for (int i = 0; i < 400; i++) {
+    
+    // Reporting: print every time the algorithm searches a cell.
+    /*
     if (i<5 || i>395) {
       printf("Iteration %i Searching cell %i\n", i, curNaiveCell) ;
     }
+    */
 
     // Seach current cell
     searchArea[curNaiveCell].naiveSearches++ ;
@@ -91,7 +108,7 @@ void search_array(struct OceanCell searchArea[], int returnArr[]) {
 
 }
 
-
+// Find the best location according to the Bayesian priors.
 int find_best_location(struct OceanCell searchArea[]) {
   int bestLocation = 0 ;
   double curMax = searchArea[0].currentProbability ;
@@ -104,7 +121,7 @@ int find_best_location(struct OceanCell searchArea[]) {
   return bestLocation ;
 }
 
-
+// MAIN
 void main() {
   // Input a new seed to the rand() function every time the program
   // is run. 
@@ -133,7 +150,7 @@ void main() {
     // printf("How likely  in cell %i? %10.8f\n", i, searchArea[i].currentProbability) ;
   }
 
-  printf("Best cell is %i\n\n", find_best_location(searchArea) ) ;
+  printf("Best cell (Bayesian) is %i\n\n", find_best_location(searchArea) ) ;
     
   // Set the location of the submarine.
   searchArea[location].subHere = 1;
@@ -149,8 +166,37 @@ void main() {
   printf("Naive search searched cell %i %i times.\n", searchReturn[0], searchArea[searchReturn[0]].naiveSearches );
   printf("Naive search found the sub in cell %i, where we expected it in cell %i.\n\n", searchReturn[0], location);
 
-  // TODO: Main should run the setup and search many thousands of times and write searchCounter
-  // out to a text file suitable for import to R for statistical analysis.
+  // Perform a number of simulations according to the constant defined above.
+  printf("Performing %i simulations...\n", NUM_TRIALS);
+  searchCounter = 0;
+
+  for (int i = 0; i < NUM_TRIALS; i++ ) {
+    location = set_random_location();
+
+    // Initialize the ocean and the priors
+    for (int i = 0; i < 400; i++) {
+      searchArea[i].subHere = 0;
+      searchArea[i].naiveSearches = 0;
+	    searchArea[i].bayesSearches = 0;
+	  
+      if (i<200) {
+	      searchArea[i].currentProbability = (i+1)/40000.0 ;
+      } else {
+        searchArea[i].currentProbability =  1/100.0 - (i)/40000.0 ;
+      }
+    }
     
+    // Set the location of the submarine.
+    searchArea[location].subHere = 1;
+
+    // Search the array for the submarine.
+    do {
+      search_array(searchArea, searchReturn);
+      searchCounter = searchCounter + searchReturn[1];
+    } while(searchReturn[0] == -1);
+  }
+
+  printf("The total number of searches performed was %i\n", searchCounter);
+
 }
 
