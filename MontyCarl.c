@@ -5,17 +5,21 @@
 #include "OceanCell.h"
 
 // Performs a Monte Carlo simulation of submarine search with a naive algorithm.
+// TODO: This hangs sometimes. Some edge case is not being checked.
 
 
 // Constants:
 // The probability that a search is successgful in finding the sub, and
 // the number of trials to be completed.
 #define SUCCESS_PROB 0.46
-#define NUM_TRIALS 1000
+#define NUM_TRIALS 10000
 
 
 // Helper function: return a random double uniformly distributed on [0,1]
-// TODO: this may not be statistically sound.
+// Note: this may not be statistically sound. This is not a perfect uniform distributon;
+// since there are only (RAND_MAX +1) discrete values. This is not relevant for purposes
+// of the search_cell helper function, but may be relevant for the set_random_location
+// function due to the way the inverse function works when scaled to 400.
 double get_random() { 
   return ((double)rand() / (double)RAND_MAX); 
 }
@@ -108,6 +112,8 @@ void search_array(struct OceanCell searchArea[], int returnArr[]) {
 
 }
 
+
+
 // Find the best location according to the Bayesian priors.
 int find_best_location(struct OceanCell searchArea[]) {
   int bestLocation = 0 ;
@@ -119,6 +125,38 @@ int find_best_location(struct OceanCell searchArea[]) {
     }
   }
   return bestLocation ;
+}
+
+// Update the Bayesian prior of a cell, given that we did not find the sub there.
+// Then, update all the other cells' priors.
+void update_prior(struct OceanCell searchArea[], int cell) {
+  double prior = searchArea[cell].currentProbability;
+  prior = ((1 - SUCCESS_PROB) * prior)/(1 - (SUCCESS_PROB * prior));
+  searchArea[cell].currentProbability = prior;
+
+  for (int i = 0; i < 400; i++) {
+    prior = searchArea[i].currentProbability;
+    prior = prior / (1 - (SUCCESS_PROB * prior));
+    searchArea[i].currentProbability = prior;
+  }
+  
+}
+
+// Searches an input array according to a Bayesian algorithm.
+void search_bayesian(struct OceanCell searchArea[], int returnArr[]) {
+  int bestLocation, numSearches, ret;
+  for (int i = 0; i < 400; i++) {
+    bestLocation = find_best_location(searchArea);
+    ret = search_cell(searchArea[bestLocation]);
+    numSearches++;
+    if (ret == 0) {
+      update_prior(searchArea, bestLocation);
+    } else {
+      break;
+    }
+  }
+  returnArr[0] = bestLocation;
+  returnArr[1] = numSearches;
 }
 
 // MAIN
@@ -194,6 +232,7 @@ void main() {
       search_array(searchArea, searchReturn);
       searchCounter = searchCounter + searchReturn[1];
     } while(searchReturn[0] == -1);
+  
   }
 
   printf("The total number of searches performed was %i\n", searchCounter);
