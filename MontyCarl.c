@@ -113,7 +113,6 @@ void search_array(struct OceanCell searchArea[], int returnArr[]) {
 }
 
 
-
 // Find the best location according to the Bayesian priors.
 int find_best_location(struct OceanCell searchArea[]) {
   int bestLocation = 0 ;
@@ -127,19 +126,21 @@ int find_best_location(struct OceanCell searchArea[]) {
   return bestLocation ;
 }
 
-// Update the Bayesian prior of a cell, given that we did not find the sub there.
-// Then, update all the other cells' priors.
+// Update the Bayesian prior the cells given that we did not find the sub.
+// The cell where we didn't find the sub has a big drop in probability.
+// All the other cells have a small increase in probability
 void update_prior(struct OceanCell searchArea[], int cell) {
-  double prior = searchArea[cell].currentProbability;
-  prior = ((1 - SUCCESS_PROB) * prior)/(1 - (SUCCESS_PROB * prior));
-  searchArea[cell].currentProbability = prior;
-
+  double prior ;
+  double posterior;
   for (int i = 0; i < 400; i++) {
     prior = searchArea[i].currentProbability;
-    prior = prior / (1 - (SUCCESS_PROB * prior));
-    searchArea[i].currentProbability = prior;
+    if (i != cell) {
+      posterior = prior / (1 - (SUCCESS_PROB * prior));
+    } else {
+      posterior = ((1 - SUCCESS_PROB) * prior)/(1 - (SUCCESS_PROB * prior));
+    }
+    searchArea[i].currentProbability = posterior ;
   }
-  
 }
 
 // Searches an input array according to a Bayesian algorithm.
@@ -179,7 +180,7 @@ void main() {
 	  searchArea[i].bayesSearches = 0;
 	  
     if (i<200) {
-	    searchArea[i].currentProbability = (i+1)/40000.0 ;
+      searchArea[i].currentProbability = (i+1)/40000.0 ;
     } else {
       searchArea[i].currentProbability =  1/100.0 - (i)/40000.0 ;
     }
@@ -235,7 +236,7 @@ void main() {
   
   }
 
-  printf("The total number of searches performed was %i\n", searchCounter);
+  printf("The average number of searches performed was %10.4f\n", (float)searchCounter/(float)NUM_TRIALS );
 
 }
 
